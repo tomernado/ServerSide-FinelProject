@@ -1,8 +1,16 @@
 // Logging service client module - handles communication with external logging service
 const axios = require("axios");
+const pino = require("pino");
 const config = require("../config");
 
-// Asynchronously sends log data to the centralized logging microservice
+/*
+ * Dedicated minimal logger for this client only — avoids circular dependency.
+ * logging/index.js → logging_client.js, so we cannot import from ../logging here.
+ * This instance writes directly to stderr with no custom stream.
+ */
+const internalLogger = pino({ level: "error" }, process.stderr);
+
+// Graceful degradation: logging failure must never crash the host service
 const sendLogToService = async (logData) => {
   if (!config.LOGGING_SERVICE_URL) return;
 
@@ -12,8 +20,7 @@ const sendLogToService = async (logData) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Silent failure (Graceful Degradation): We don't crash the host service if logging fails
-    console.error("Failed to send log to logging service:", error.message);
+    internalLogger.error({ error: error.message }, "Failed to send log to logging service");
   }
 };
 

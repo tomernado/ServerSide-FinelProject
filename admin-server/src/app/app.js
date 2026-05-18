@@ -1,14 +1,17 @@
+// Express application factory for the admin service
 const express = require("express");
-const adminRoutes = require("./routes/admin_routes");
-const { errorHandler } = require("./middlewares/error_handler");
+const loggerMiddleware = require("./middlewares/logger_middleware");
+const errorMiddleware = require("./middlewares/error_middleware");
+const routes = require("./routes");
 
-const app = express();
+const createApp = () => {
+  const app = express();
+  app.use(loggerMiddleware);
+  app.use(express.json());
+  // Routes mounted at /api so the about endpoint resolves to /api/about per spec
+  app.use("/api", routes);
+  app.use(errorMiddleware);
+  return app;
+};
 
-app.use(express.json());
-
-// Main entry point for admin operations
-app.use("/api/admin", adminRoutes);
-
-app.use(errorHandler);
-
-module.exports = app;
+module.exports = createApp;

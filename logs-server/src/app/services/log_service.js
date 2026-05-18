@@ -1,25 +1,9 @@
 // Logs service - business logic layer
-// Handles log validation, creation, and retrieval from database
 const logsRepository = require("../repositories/logs_repository");
-const { ValidationError } = require("../../errors/validation_error");
-const Log = require("../../db/models/log.model");
 
-// Validates incoming log data strictly against the Mongoose schema
-const validateLogData = (data) => {
-  const tempLog = new Log(data);
-  const validationError = tempLog.validateSync();
-
-  if (validationError) {
-    const firstErrorKey = Object.keys(validationError.errors)[0];
-    throw new ValidationError(validationError.errors[firstErrorKey].message);
-  }
-
-  return tempLog;
-};
-
-// Validates and persists a new log entry
+// Schema validation delegated to repository — service stays completely Mongoose-agnostic
 const createLog = async (logData) => {
-  const validatedLog = validateLogData(logData);
+  const validatedLog = logsRepository.validateData(logData);
 
   // Directly pass to repository; errors bubble up naturally
   const log = await logsRepository.createLog({

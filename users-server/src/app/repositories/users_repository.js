@@ -1,32 +1,39 @@
-// Users repository - database access layer for user management
-// Handles all database operations for user profiles and authentication
-
-// Handles direct database operations for the users collection
 const { User } = require("../../db/models");
+const { ValidationError } = require("../../errors/validation_error");
 
-// Creates and saves a new user document to MongoDB
+// Validates user data against the Mongoose schema — keeps the service Mongoose-agnostic
+const validateData = (data) => {
+  const tempUser = new User(data);
+  const validationError = tempUser.validateSync();
+  if (validationError) {
+    const firstErrorKey = Object.keys(validationError.errors)[0];
+    throw new ValidationError(validationError.errors[firstErrorKey].message);
+  }
+  return tempUser;
+};
+
 const createUser = async (userData) => {
   const user = new User(userData);
   return await user.save();
 };
 
-// Retrieves a specific user based on the custom 'id' field (not Mongoose '_id')
+// Uses the custom numeric 'id' field — not Mongoose's auto-generated '_id'
 const findUserById = async (id) => {
-  return await User.findOne({ id });
+  return await User.findOne({ id }).lean();
 };
 
-// Fetches all user documents from the collection
 const findAllUsers = async () => {
-  return await User.find({});
+  return await User.find({}).lean();
 };
 
-// Efficiently checks if a user exists without fetching the entire document payload
+// Uses countDocuments rather than find to avoid loading full documents just for existence checks
 const checkUserExists = async (id) => {
   const count = await User.countDocuments({ id });
   return count > 0;
 };
 
 module.exports = {
+  validateData,
   createUser,
   findUserById,
   findAllUsers,

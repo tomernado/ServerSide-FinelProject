@@ -1,32 +1,29 @@
-// Logging service client module - handles communication with external logging service
 const axios = require("axios");
+const pino = require("pino");
 const config = require("../config");
 
-const sendLogToService = async function (logData) {
-  // Check if logging service URL is configured
+/*
+ * Dedicated minimal logger for this client only — avoids circular dependency.
+ * logging/index.js → logging_client.js, so we cannot import from ../logging here.
+ */
+const internalLogger = pino({ level: "error" }, process.stderr);
+
+const sendLogToService = async (logData) => {
   if (!config.LOGGING_SERVICE_URL) {
     return;
   }
 
   try {
-    // Send POST request to logging service endpoint
     await axios.post(`${config.LOGGING_SERVICE_URL}/logs`, logData, {
       timeout: config.LOGGING_SERVICE_TIMEOUT,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Failed to send log to logging service:", error.message);
+    internalLogger.error({ error: error.message }, "Failed to send log to logging service");
   }
 };
 
-/**
- * Creates and sends a log entry to the logging service
- * Wraps log data and sends asynchronously
- */
-const createLog = function (logData) {
-  // Invoke async send function without awaiting to avoid blocking
+const createLog = (logData) => {
   sendLogToService({
     ...logData,
     timestamp: new Date().toISOString(),

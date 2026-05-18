@@ -1,18 +1,20 @@
-// Logs service unit tests
-// Tests for log creation and retrieval: createLog, getAllLogs
-// Validates field requirements, data types, and optional field handling
-// Mocks logs repository for isolated service layer testing
+jest.mock("../../src/app/repositories/logs_repository");
 
 const logsService = require("../../src/app/services/log_service");
 const logsRepository = require("../../src/app/repositories/logs_repository");
-const { ValidationError } = require("../../src/errors/validation_error");
+// Errors live in src/app/errors for the logs-server (different from other services)
+const { ValidationError } = require("../../src/app/errors/validation_error");
 
-// Mocking the data access layer to isolate the service logic
-jest.mock("../../src/app/repositories/logs_repository");
+// Use the real validateData so Mongoose schema validation remains active in tests
+// while all DB operations stay mocked
+const { validateData: realValidateData } = jest.requireActual(
+  "../../src/app/repositories/logs_repository"
+);
 
 describe("Logs Service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    logsRepository.validateData.mockImplementation(realValidateData);
   });
 
   describe("createLog", () => {
@@ -103,8 +105,6 @@ describe("Logs Service", () => {
         { _id: "log2", level: "error", message: "Earlier", timestamp: earlier }
       ];
 
-      // Note: The actual sorting logic is handled in the Repository using .sort({ timestamp: -1 })
-      // This test ensures the Service preserves the order returned by the mocked Repository.
       logsRepository.findAllLogs.mockResolvedValue(logs);
 
       const result = await logsService.getAllLogs();

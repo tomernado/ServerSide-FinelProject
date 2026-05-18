@@ -1,27 +1,26 @@
-// Costs service unit tests
-// Tests for all service methods: createCost, getMonthlyReport, getUserTotalCosts
-// Mocks repository and external service calls for isolated testing
-// Uses Jest testing framework with mock functions for dependencies
-
 jest.mock("../../src/app/repositories/costs_repository");
 jest.mock("../../src/clients/users_client");
 
 const costsService = require("../../src/app/services/costs_service");
 const costsRepository = require("../../src/app/repositories/costs_repository");
 const usersClient = require("../../src/clients/users_client");
-const Cost = require("../../src/db/models/cost.model");
 const { ValidationError } = require("../../src/errors/validation_error");
 const { NotFoundError } = require("../../src/errors/not_found_error");
 const { ServiceError } = require("../../src/errors/service_error");
 
+// Use the real validateData so Mongoose schema validation remains active in tests
+// while all DB operations (createCost, find, etc.) stay mocked
+const { validateData: realValidateData } = jest.requireActual(
+  "../../src/app/repositories/costs_repository"
+);
+
 describe("Costs Service", () => {
-  // Reset all mocks before each test to ensure isolation
   beforeEach(() => {
     jest.clearAllMocks();
+    costsRepository.validateData.mockImplementation(realValidateData);
   });
 
   describe("createCost", () => {
-    // Test 1: Verify cost creation with valid input data
     it("should create cost successfully with valid data", async () => {
       const costData = {
         description: "Lunch",
@@ -49,11 +48,11 @@ describe("Costs Service", () => {
         category: "food",
         userid: 1,
         sum: 50,
+        createdAt: expect.any(Date),
       });
       expect(result).toEqual(savedCost);
     });
-    
-// Test 2: Verify null description is missing
+
     it("should throw ValidationError when description is missing", async () => {
       const costData = {
         category: "food",
@@ -66,7 +65,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 3: Verify null description is rejected
     it("should throw ValidationError when description is not a string", async () => {
       const costData = {
         description: null,
@@ -80,7 +78,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 4: Verify category field is required
     it("should throw ValidationError when category is missing", async () => {
       const costData = {
         description: "Lunch",
@@ -93,7 +90,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 5: Verify category must be a string
     it("should throw ValidationError when category is not a string", async () => {
       const costData = {
         description: "Lunch",
@@ -107,7 +103,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 6: Verify userid field is required
     it("should throw ValidationError when userid is missing", async () => {
       const costData = {
         description: "Lunch",
@@ -120,7 +115,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 7: Verify userid must be a number
     it("should throw ValidationError when userid is not a number", async () => {
       const costData = {
         description: "Lunch",
@@ -134,9 +128,7 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 8: Verify sum field is required
     it("should throw ValidationError when sum is missing", async () => {
-      // Arrange: Create cost data without required sum field
       const costData = {
         description: "Lunch",
         category: "food",
@@ -148,7 +140,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 9: Verify sum must be a number
     it("should throw ValidationError when sum is not a number", async () => {
       const costData = {
         description: "Lunch",
@@ -162,7 +153,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 10: Verify sum must be positive
     it("should throw ValidationError when sum is zero or negative", async () => {
       const costData = {
         description: "Lunch",
@@ -176,7 +166,6 @@ describe("Costs Service", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    // Test 11: Verify whitespace trimming on string fields
     it("should trim whitespace from description and category", async () => {
       const costData = {
         description: "  Lunch  ",
@@ -204,12 +193,12 @@ describe("Costs Service", () => {
         category: "food",
         userid: 1,
         sum: 50,
+        createdAt: expect.any(Date),
       });
     });
   });
 
   describe("getMonthlyReport", () => {
-    // Tests for monthly cost report generation
     it("should throw NotFoundError when user does not exist", async () => {
       usersClient.checkUserExists.mockResolvedValue(false);
 
@@ -459,8 +448,6 @@ describe("Costs Service", () => {
   });
 
   describe("getUserTotalCosts", () => {
-    // Tests for calculating total costs for a specific user
-    // Validates userId parameter and handles zero costs case
     it("should return total costs for a user", async () => {
       costsRepository.getCostsTotalByUserId.mockResolvedValue(1500);
 
@@ -472,7 +459,7 @@ describe("Costs Service", () => {
       expect(costsRepository.getCostsTotalByUserId).toHaveBeenCalledWith(1);
       expect(result).toEqual({
         userid: 1,
-        total_costs: 1500,
+        total: 1500,
       });
     });
 
@@ -486,7 +473,7 @@ describe("Costs Service", () => {
 
       expect(result).toEqual({
         userid: 5,
-        total_costs: 0,
+        total: 0,
       });
     });
 
@@ -519,7 +506,7 @@ describe("Costs Service", () => {
       expect(costsRepository.getCostsTotalByUserId).toHaveBeenCalledWith(2);
       expect(result).toEqual({
         userid: 2,
-        total_costs: 800,
+        total: 800,
       });
     });
   });

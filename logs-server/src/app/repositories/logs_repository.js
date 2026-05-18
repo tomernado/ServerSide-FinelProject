@@ -1,31 +1,33 @@
 // Logs repository - database access layer for log management
-// Handles all database operations for application logs
 const Log = require("../../db/models/log.model");
+const { ValidationError } = require("../errors/validation_error");
 
-/**
- * Creates a new log entry in the database
- * Stores log information including timestamp, level, and message
- */
-const createLog = async function (logData) {
+// Validates log data against the Mongoose schema — keeps the service Mongoose-agnostic
+const validateData = (data) => {
+  const tempLog = new Log(data);
+  const validationError = tempLog.validateSync();
+  if (validationError) {
+    const firstErrorKey = Object.keys(validationError.errors)[0];
+    throw new ValidationError(validationError.errors[firstErrorKey].message);
+  }
+  return tempLog;
+};
+
+const createLog = async (logData) => {
   const log = new Log(logData);
   return await log.save();
 };
 
-/**
- * Retrieves all logs from the database sorted by newest first
- */
-const findAllLogs = async function () {
-  return await Log.find().sort({ timestamp: -1 });
+const findAllLogs = async () => {
+  return await Log.find().sort({ timestamp: -1 }).lean();
 };
 
-/**
- * Retrieves a specific log by its database ID
- */
-const findLogById = async function (id) {
-  return await Log.findById(id);
+const findLogById = async (id) => {
+  return await Log.findById(id).lean();
 };
 
 module.exports = {
+  validateData,
   createLog,
   findAllLogs,
   findLogById,

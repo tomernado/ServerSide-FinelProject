@@ -1,5 +1,4 @@
 // Users service - business logic layer
-// Handles user validation, CRUD operations, and cost integration via external service
 const usersRepository = require("../repositories/users_repository");
 const costsClient = require("../../clients/costs_client");
 const { logger } = require("../../logging");
@@ -7,25 +6,11 @@ const { ValidationError } = require("../../errors/validation_error");
 const { NotFoundError } = require("../../errors/not_found_error");
 const { DuplicateError } = require("../../errors/duplicate_error");
 const { ServiceError } = require("../../errors/service_error");
-const { User } = require("../../db/models");
-
-// Validates user data synchronously using the Mongoose model schema
-const validateUserData = (data) => {
-  const tempUser = new User(data);
-  const validationError = tempUser.validateSync();
-
-  if (validationError) {
-    const firstErrorKey = Object.keys(validationError.errors)[0];
-    const firstError = validationError.errors[firstErrorKey];
-    throw new ValidationError(firstError.message);
-  }
-
-  return tempUser;
-};
 
 // Handles business logic for adding a new user, including duplication checks
+// Schema validation delegated to repository — service stays completely Mongoose-agnostic
 const addUser = async (userData) => {
-  const validatedUser = validateUserData(userData);
+  const validatedUser = usersRepository.validateData(userData);
 
   const exists = await usersRepository.checkUserExists(validatedUser.id);
   if (exists) {

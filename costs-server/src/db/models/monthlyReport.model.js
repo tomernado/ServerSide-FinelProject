@@ -8,15 +8,8 @@ const monthlyReportSchema = new mongoose.Schema(
     userid: { type: Number, required: true },
     year: { type: Number, required: true },
     month: { type: Number, required: true },
-    costs: [
-      {
-        food: [{ sum: Number, description: String, day: Number }],
-        education: [{ sum: Number, description: String, day: Number }],
-        health: [{ sum: Number, description: String, day: Number }],
-        housing: [{ sum: Number, description: String, day: Number }],
-        sports: [{ sum: Number, description: String, day: Number }],
-      },
-    ],
+    // השינוי הקריטי: הגדרת costs כמערך גנרי כדי שמונגו לא ידחוף _id לכל אובייקט
+    costs: { type: Array, required: true }
   },
   { timestamps: true }
 );
